@@ -24,6 +24,10 @@ def download_moex_securities_data() -> str:
     securities = pd.DataFrame(records, columns=columns)
 
     securities["SEC_NAME"] = securities["SHORTNAME"].str.split("-").str[0]
+    # If SECID ends with a digit, drop last 2 characters; otherwise keep SECID as-is.
+    # Use fillna('') to avoid errors when SECID is NaN.
+    mask = securities["SECID"].fillna("").str[-1].str.isdigit()
+    securities['SECID_SHORT'] = securities['SECID'].where(~mask, securities['SECID'].str[:-2])
     securities["STEPPRICE"] = pd.to_numeric(securities["STEPPRICE"], errors="coerce")
     securities["MINSTEP"] = pd.to_numeric(securities["MINSTEP"], errors="coerce")
     securities["one_step_price"] = securities["STEPPRICE"] / securities["MINSTEP"]

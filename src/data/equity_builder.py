@@ -112,14 +112,16 @@ def build_equity(
             )
         if "Текущее количество контрактов" in trades.columns:
             trades = trades.copy()
+            cleaned_current_pos = (
+                trades["Текущее количество контрактов"]
+                .astype(str)
+                .str.replace(",", ".", regex=False)
+                .str.replace(r"[^\d\.\-]", "", regex=True)
+            )
             trades["current_pos"] = (
-                pd.to_numeric(
-                    trades["Текущее количество контрактов"]
-                    .astype(str)
-                    .str.replace(r"[^\d\-]", "", regex=True),
-                    errors="coerce",
-                )
-                .fillna(0)
+                pd.to_numeric(cleaned_current_pos, errors="coerce")
+                .fillna(0.0)
+                .round()
                 .astype(int)
             )
         if "date_time" in trades.columns:

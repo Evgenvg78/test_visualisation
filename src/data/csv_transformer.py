@@ -126,16 +126,14 @@ def load_transform_csv(
     df[price_col] = pd.to_numeric(df[price_col], errors="coerce").round(2)
 
     # 3) Текущее количество контрактов -> integer
-    df[current_pos_col] = (
+    cleaned_current_pos = (
         df[current_pos_col]
         .astype(str)
-        .str.replace(r"[^\d\-]", "", regex=True)
+        .str.replace(",", ".", regex=False)
+        .str.replace(r"[^\d\.\-]", "", regex=True)
     )
-    df[current_pos_col] = (
-        pd.to_numeric(df[current_pos_col], errors="coerce")
-        .fillna(0)
-        .astype(int)
-    )
+    numeric_current_pos = pd.to_numeric(cleaned_current_pos, errors="coerce").fillna(0.0)
+    df[current_pos_col] = numeric_current_pos.round().astype(int)
 
     # Приводим к унифицированным именам столбцов
     df = df.rename(

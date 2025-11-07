@@ -471,6 +471,123 @@ def _save_result(df: pd.DataFrame, target: Path) -> None:
     output.to_csv(target, index=False)
 
 
+def _ticker_cache_path(root: Path, ticker: str) -> Path:
+    """Return the per-ticker cache file path."""
+    normalized = _normalize_ticker(ticker)
+    if not normalized:
+        raise ValueError("Ticker name must not be empty when building cache path")
+    return root / f"{normalized}_ohcl.csv"
+
+
+def _combine_frames(
+    frames: list[pd.DataFrame],
+    *,
+    steps_path: Path,
+) -> pd.DataFrame:
+    """Merge multiple OHLC chunks, enforce schema, and back-fill step prices."""
+    valid_frames = [frame for frame in frames if not frame.empty]
+    if not valid_frames:
+        return _empty_result()
+    combined = pd.concat(valid_frames, ignore_index=True)
+    combined = _enforce_schema(combined)
+    return _fill_missing_step_prices(combined, steps_path)
+
+
+# ---------------------- Interval coverage (per ticker) ----------------------
+
+def _coverage_dir(root: Path) -> Path:
+    d = root / "_coverage"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _coverage_path(root: Path, ticker: str) -> Path:
+    return _coverage_dir(root) / f"{_normalize_ticker(ticker)}_intervals.csv"
+
+
+def _read_coverage(root: Path, ticker: str) -> pd.DataFrame:
+    """Read covered intervals for a ticker. Columns: start_dt, end_dt (datetime64[ns])."""
+    path = _coverage_path(root, ticker)
+    if not path.exists():
+        return pd.DataFrame(columns=["start_dt", "end_dt"]).astype(
+            {"start_dt": "datetime64[ns]", "end_dt": "datetime64[ns]"}
+        )
+    df = pd.read_csv(path)
+    if df.empty:
+        return pd.DataFrame(columns=["start_dt", "end_dt"]).astype(
+            {"start_dt": "datetime64[ns]", "end_dt": "datetime64[ns]"}
+        )
+    df["start_dt"] = pd.to_datetime(df["start_dt"], errors="coerce").dt.floor("min")
+    df["end_dt"] = pd.to_datetime(df["end_dt"], errors="coerce").dt.ceil("min")
+    df = df.dropna(subset=["start_dt", "end_dt"]).sort_values("start_dt")
+    return df.reset_index(drop=True)
+
+
+def _write_coverage(root: Path, ticker: str, intervals: pd.DataFrame) -> None:
+    if intervals.empty:
+        # create or truncate file
+        _coverage_path(root, ticker).write_text("start_dt,end_dt\n", encoding="utf-8")
+        return
+    out = intervals.copy()
+    out["start_dt"] = out["start_dt"].dt.strftime("%Y-%m-%d %H:%M:%S")
+    out["end_dt"] = out["end_dt"].dt.strftime("%Y-%m-%d %H:%M:%S")
+    out.to_csv(_coverage_path(root, ticker), index=False)
+
+
+def _merge_intervals(intervals: pd.DataFrame) -> pd.DataFrame:
+    """Merge overlapping [start_dt, end_dt] rows."""
+    if intervals.empty:
+        return intervals
+    df = intervals.sort_values("start_dt").reset_index(drop=True)
+    merged: list[tuple[pd.Timestamp, pd.Timestamp]] = []
+    cur_start = df.loc[0, "start_dt"]
+    cur_end = df.loc[0, "end_dt"]
+    for i in range(1, len(df)):
+        s = df.loc[i, "start_dt"]
+        e = df.loc[i, "end_dt"]
+        if s <= cur_end + pd.Timedelta(minutes=1):
+            if e > cur_end:
+                cur_end = e
+        else:
+            merged.append((cur_start, cur_end))
+            cur_start, cur_end = s, e
+    merged.append((cur_start, cur_end))
+    return pd.DataFrame(merged, columns=["start_dt", "end_dt"]).astype(
+        {"start_dt": "datetime64[ns]", "end_dt": "datetime64[ns]"}
+    )
+
+
+def _add_coverage(intervals: pd.DataFrame, new_start: pd.Timestamp, new_end: pd.Timestamp) -> pd.DataFrame:
+    add = pd.DataFrame({"start_dt": [new_start.floor("min")], "end_dt": [new_end.ceil("min")]})
+    if intervals.empty:
+        return add.astype({"start_dt": "datetime64[ns]", "end_dt": "datetime64[ns]"})
+    return _merge_intervals(pd.concat([intervals, add], ignore_index=True))
+
+
+def _subtract_coverage(required_start: pd.Timestamp, required_end: pd.Timestamp, intervals: pd.DataFrame) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
+    """Return uncovered sub-intervals of [required_start, required_end] given covered intervals."""
+    start = required_start.floor("min")
+    end = required_end.ceil("min")
+    if start > end:
+        return []
+    uncovered: list[tuple[pd.Timestamp, pd.Timestamp]] = []
+    cursor = start
+    for row in intervals.sort_values("start_dt").itertuples(index=False):
+        s, e = row.start_dt, row.end_dt
+        if e < cursor:
+            continue
+        if s > end:
+            break
+        if s > cursor:
+            uncovered.append((cursor, min(s - pd.Timedelta(minutes=1), end)))
+        cursor = max(cursor, e + pd.Timedelta(minutes=1))
+        if cursor > end:
+            break
+    if cursor <= end:
+        uncovered.append((cursor, end))
+    return [(s, e) for s, e in uncovered if s <= e]
+
+
 def _fill_missing_step_prices(df: pd.DataFrame, steps_path: Path) -> pd.DataFrame:
     """Ensure each ticker has a populated 1_step_price column."""
     result = df.copy()
@@ -508,6 +625,10 @@ def download_moex_ohlc(
     The resulting dataframe is returned and, optionally, stored under
     OHCL/<log_name>_ohcl.csv. Subsequent runs reuse existing data and request only
     missing minute slots (with a small buffer to minimise boundary issues).
+
+    The final combined dataset is clipped to the date range of the last
+    test segment found in the supplied log to avoid long empty stretches
+    when wider cached data is present.
     """
     log_path = Path(log_path)
     if not log_path.exists():
@@ -534,91 +655,151 @@ def download_moex_ohlc(
         logger.warning("No trades detected in the last test segment; nothing to download.")
         return _empty_result()
 
-    existing = _read_existing(output_path)
-    downloads: list[pd.DataFrame] = []
+    legacy = _read_existing(output_path)
+    ticker_frames: dict[str, pd.DataFrame] = {}
+    ticker_paths: dict[str, Path] = {}
+
+    def _ensure_ticker_cache(ticker: str) -> pd.DataFrame:
+        cache_path = ticker_paths.setdefault(
+            ticker,
+            _ticker_cache_path(output_dir, ticker),
+        )
+        if ticker in ticker_frames:
+            return ticker_frames[ticker]
+
+        sources: list[pd.DataFrame] = []
+        on_disk = _read_existing(cache_path)
+        if not on_disk.empty:
+            sources.append(on_disk)
+        if not legacy.empty:
+            legacy_slice = legacy.loc[legacy["TICKER"] == ticker]
+            if not legacy_slice.empty:
+                sources.append(legacy_slice)
+        ticker_frames[ticker] = (
+            _combine_frames(sources, steps_path=steps_reference)
+            if sources
+            else _empty_result()
+        )
+        return ticker_frames[ticker]
+
+    ticker_coverage: dict[str, pd.DataFrame] = {}
 
     for row in plan.itertuples(index=False):
         ticker = row.ticker
-        ticker_existing = (
-            existing.loc[existing["TICKER"] == ticker]
-            if not existing.empty
-            else _empty_result()
-        )
-        missing_minutes = _compute_missing_minutes(
-            ticker_existing,
-            start_dt=row.start_dt,
-            end_dt=row.end_dt,
-        )
-        if missing_minutes.empty:
+        ticker_existing = _ensure_ticker_cache(ticker)
+
+        # Coverage-driven logic: compute uncovered intervals and only fetch them.
+        coverage = ticker_coverage.get(ticker)
+        if coverage is None:
+            coverage = _read_coverage(output_dir, ticker)
+            # Если покрытия нет, попробуем восстановить его из имеющихся свечей
+            if coverage.empty and not ticker_existing.empty:
+                min_dt = pd.to_datetime(ticker_existing["DATE_TIME"], errors="coerce").min()
+                max_dt = pd.to_datetime(ticker_existing["DATE_TIME"], errors="coerce").max()
+                if pd.notna(min_dt) and pd.notna(max_dt):
+                    coverage = pd.DataFrame(
+                        {"start_dt": [min_dt.floor("min")], "end_dt": [max_dt.ceil("min")]}
+                    ).astype({"start_dt": "datetime64[ns]", "end_dt": "datetime64[ns]"})
+            ticker_coverage[ticker] = coverage
+
+        uncovered = _subtract_coverage(row.start_dt, row.end_dt, coverage)
+        if not uncovered:
             logger.info(
-                "Ticker %s already has candles covering %s .. %s",
+                "Ticker %s already covered for %s .. %s",
                 ticker,
                 row.start_dt,
                 row.end_dt,
             )
+            # включаем имеющийся кэш тикера в общий результат
+            ticker_frames[ticker] = ticker_existing
             continue
 
-        fetch_start = (
-            missing_minutes.min() - pd.Timedelta(minutes=buffer_minutes)
-        ).floor("min")
-        fetch_end = (
-            missing_minutes.max() + pd.Timedelta(minutes=buffer_minutes)
-        ).ceil("min")
-        fetch_start = min(fetch_start, row.start_dt)
-        fetch_end = max(fetch_end, row.end_dt)
+        for (u_start, u_end) in uncovered:
+            fetch_start = (u_start - pd.Timedelta(minutes=buffer_minutes)).floor("min")
+            fetch_end = (u_end + pd.Timedelta(minutes=buffer_minutes)).ceil("min")
 
-        logger.info(
-            "Downloading MOEX candles for %s: %s -> %s",
-            ticker,
-            fetch_start,
-            fetch_end,
-        )
-        candles = _download_ticker_minutes(
-            ticker,
-            start_dt=fetch_start,
-            end_dt=fetch_end,
-            board=board,
-        )
-        if candles.empty:
-            logger.warning(
-                "No candles received for %s within %s .. %s",
+            logger.info(
+                "Downloading MOEX candles for %s: %s -> %s",
                 ticker,
                 fetch_start,
                 fetch_end,
             )
-            continue
-
-        window = candles[
-            (candles["DATE_TIME"] >= row.start_dt) & (candles["DATE_TIME"] <= row.end_dt)
-        ].copy()
-        if window.empty:
-            logger.warning(
-                "Downloaded candles for %s do not fall inside %s .. %s",
+            candles = _download_ticker_minutes(
                 ticker,
-                row.start_dt,
-                row.end_dt,
+                start_dt=fetch_start,
+                end_dt=fetch_end,
+                board=board,
             )
-            continue
+            if candles.empty:
+                logger.warning(
+                    "No candles received for %s within %s .. %s",
+                    ticker,
+                    fetch_start,
+                    fetch_end,
+                )
+                # Even если пусто, считаем интервал проверенным, чтобы не перекачивать заново.
+                ticker_coverage[ticker] = _add_coverage(coverage, u_start, u_end)
+                coverage = ticker_coverage[ticker]
+                continue
 
-        window["TICKER"] = ticker
-        window["1_step_price"] = _resolve_step_price(ticker, steps_reference)
-        downloads.append(window)
+            # Оставляем только часть, которая нужна по плану / интервалу
+            left = max(row.start_dt, u_start)
+            right = min(row.end_dt, u_end)
+            window = candles[(candles["DATE_TIME"] >= left) & (candles["DATE_TIME"] <= right)].copy()
+            if window.empty:
+                logger.warning(
+                    "Downloaded candles for %s do not fall inside %s .. %s",
+                    ticker,
+                    left,
+                    right,
+                )
+                ticker_coverage[ticker] = _add_coverage(coverage, u_start, u_end)
+                coverage = ticker_coverage[ticker]
+                continue
 
-    frames = []
-    if not existing.empty:
-        frames.append(existing)
-    if downloads:
-        frames.extend(downloads)
+            window["TICKER"] = ticker
+            window["1_step_price"] = _resolve_step_price(ticker, steps_reference)
+            ticker_frames[ticker] = _combine_frames(
+                [ticker_existing, window],
+                steps_path=steps_reference,
+            )
+            ticker_existing = ticker_frames[ticker]
+            # Помечаем интервал как покрытый независимо от количества минут внутри (биржевые перерывы допустимы)
+            ticker_coverage[ticker] = _add_coverage(coverage, u_start, u_end)
+            coverage = ticker_coverage[ticker]
 
-    if not frames:
-        logger.info("No new candles downloaded; returning existing dataset.")
-        result = existing.copy()
+    ordered_tickers = plan["ticker"].astype(str).str.strip().unique()
+    selected_frames = [
+        ticker_frames.get(ticker, _empty_result())
+        for ticker in ordered_tickers
+        if not ticker_frames.get(ticker, _empty_result()).empty
+    ]
+    if selected_frames:
+        result = _combine_frames(selected_frames, steps_path=steps_reference)
     else:
-        combined = pd.concat(frames, ignore_index=True)
-        result = _enforce_schema(combined)
-        result = _fill_missing_step_prices(result, steps_reference)
+        logger.info("No candles available; returning empty dataset.")
+        result = _empty_result()
+
+    # Clip the final dataset strictly to dates present in the last test log
+    # to prevent wide gaps without trades when broader cached data exists.
+    if not result.empty and not last_trades.empty:
+        dt_min = pd.to_datetime(last_trades["date_time"], errors="coerce").min()
+        dt_max = pd.to_datetime(last_trades["date_time"], errors="coerce").max()
+        if pd.notna(dt_min) and pd.notna(dt_max):
+            dt_min = dt_min.floor("min")
+            dt_max = dt_max.ceil("min")
+            mask = (result["DATE_TIME"] >= dt_min) & (result["DATE_TIME"] <= dt_max)
+            result = result.loc[mask]
+            if not result.empty:
+                result = result.sort_values(["TICKER", "DATE_TIME"]).reset_index(drop=True)
 
     if save:
+        for ticker, frame in ticker_frames.items():
+            cache_path = ticker_paths[ticker]
+            if not frame.empty:
+                _save_result(frame, cache_path)
+        for ticker, coverage in ticker_coverage.items():
+            _write_coverage(output_dir, ticker, coverage)
         _save_result(result, output_path)
 
     return result.reset_index(drop=True)

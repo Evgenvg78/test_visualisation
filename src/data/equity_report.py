@@ -110,8 +110,10 @@ def build_equity_report(
     reference_ts = ts_series.iloc[-1]
     margin_per_contract = _load_initial_margin(ticker_name, ticker_info_csv, reference_ts)
 
-    drawdown_points, dd_start, dd_end = _max_drawdown(equity_series, ts_series)
-    drawdown_currency = drawdown_points * step_value
+    # Equity is already in currency units; _max_drawdown returns currency drawdown.
+    drawdown_currency, dd_start, dd_end = _max_drawdown(equity_series, ts_series)
+    # Convert currency drawdown into points using step value.
+    drawdown_points = (drawdown_currency / step_value) if step_value else 0.0
     go_requirement = max_contracts * margin_per_contract + drawdown_currency
     drawdown_percent = (drawdown_currency / go_requirement * 100) if go_requirement else 0.0
 

@@ -114,7 +114,7 @@ def load_transform_csv(
 
     # 1) Дата и время -> date_time; округление вниз до минуты (часто такой шаг нужнее всего)
     df[date_col] = pd.to_datetime(df[date_col], dayfirst=True, errors="coerce")
-    df[date_col] = df[date_col].dt.floor("T")  # 'T' == minute
+    df[date_col] = df[date_col].dt.floor("min")  # 'T' == minute
 
     # 2) Цена -> float (2 знака)
     df[price_col] = (

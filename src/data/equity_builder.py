@@ -24,7 +24,7 @@ __all__ = ["build_equity"]
 
 def _ensure_datetime(col: pd.Series) -> pd.Series:
     """Привести серию к pd.Timestamp и округлить вниз до минуты."""
-    return pd.to_datetime(col, errors="coerce").dt.floor("T")
+    return pd.to_datetime(col, errors="coerce").dt.floor("min")
 
 
 def build_equity(

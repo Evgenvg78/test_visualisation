@@ -33,6 +33,7 @@ class EquityReport:
     longest_drawdown_end: Optional[pd.Timestamp]
     final_equity: float
     return_percent: float
+    total_commission: float
 
     def to_pretty_text(self) -> str:
         """Render the report as an emoji-friendly multi-line string."""
@@ -68,6 +69,7 @@ class EquityReport:
             f"{clr} Доходность: {fmt_money(self.final_equity)} ₽ "
             f"({fmt_num(self.return_percent)}% от ГО)"
         )
+        commission_line = f"💸 Комиссии: {fmt_money(self.total_commission)} ₽"
         hot_line = (
             f"🔥 Максимальная просадка наблюдалась {fmt_ts(self.max_drawdown_start)} → "
             f"{fmt_ts(self.max_drawdown_end)}"
@@ -81,6 +83,7 @@ class EquityReport:
                 dd_duration,
                 trades_line,
                 pnl_line,
+                commission_line,
             ]
         )
 
@@ -125,6 +128,11 @@ def build_equity_report(
     total_trades = entry_count + exit_count
 
     final_equity = float(equity_series.iloc[-1])
+    total_commission = (
+        float(working_df["comis_count"].fillna(0.0).sum())
+        if "comis_count" in working_df
+        else 0.0
+    )
     return_percent = (final_equity / go_requirement * 100) if go_requirement else 0.0
 
     return EquityReport(
@@ -147,6 +155,7 @@ def build_equity_report(
         longest_drawdown_end=longest_end,
         final_equity=final_equity,
         return_percent=return_percent,
+        total_commission=total_commission,
     )
 
 

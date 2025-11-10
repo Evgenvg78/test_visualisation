@@ -126,13 +126,15 @@ def process_log_v2(
     build_equity_report: bool = False,
     show_plot: bool = False,
     plot_column: str = "Equity",
+    comis: float = 0.0,
 ) -> AllInOneResultV2:
     """
     Полный сценарий:
         1. Загружает/кеширует OHLC через moex_ohcl_loader.
         2. Убедится, что есть справочник шагов.
         3. Передает готовые CSV в equity_builder (который уже использует csv_transformer).
-        4. (опц.) рисует график и строит EquityReport.
+        4. (опц.) учитывает комиссию `comis` при построении equity.
+        5. (опц.) рисует график и строит EquityReport.
     """
 
     log_path = Path(log_path)
@@ -172,6 +174,7 @@ def process_log_v2(
             equity_df = build_equity(
                 candles_csv=candles_path,
                 trades_csv=log_path,
+                comis=comis,
             )
             if equity_df.empty:
                 logger.warning("Equity получился пустым; отчет построить нельзя.")

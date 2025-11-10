@@ -32,6 +32,7 @@ def build_equity(
     trades_csv: Union[str, Path],
     candles_encoding: str = "utf-8",
     trades_use_transformer: bool = True,
+    comis: float = 0.0,
 ) -> pd.DataFrame:
     """Построить DataFrame с Equity по минутам.
 
@@ -44,9 +45,11 @@ def build_equity(
         trades_use_transformer: если True, используем load_transform_csv для чтения сделок
             (корректно обработает cp1251/sep=';'). Если False, прочитаем через pandas
             автоматически (может потребоваться корректировка разделителя/кодировки).
+        comis: комиссия в рублях за контракт на каждое действие (вход/выход).
 
     Returns:
         pd.DataFrame объединённый и дополненный колонками по заданию.
+        Новая колонка `comis_count` показывает комиссию за действие в рублях.
     """
     candles_path = Path(candles_csv)
     if not candles_path.exists():
@@ -198,7 +201,12 @@ def build_equity(
     # delta_price = action_price - prev_action_price
     merged["delta_price"] = merged["action_price"] - merged["prev_action_price"]
 
-    # Pnl = prev_position * delta_price * 1_step_price
+    # comis_count = abs(trade_size) * comis
+    merged["comis_count"] = (
+        (merged["current_pos"] - merged["prev_position"]).abs() * comis
+    )
+
+    # Pnl = prev_position * delta_price * 1_step_price - commission
     step_col = None
     for candidate in ("1_step_price", "1_step_price ", "one_step_price"):
         if candidate in merged.columns:
@@ -209,7 +217,10 @@ def build_equity(
             "В файле свечей не найдена колонка с ценой шага (ожидалось '1_step_price')"
         )
 
-    merged["Pnl"] = merged["prev_position"] * merged["delta_price"] * merged[step_col]
+    merged["Pnl"] = (
+        merged["prev_position"] * merged["delta_price"] * merged[step_col]
+        - merged["comis_count"].fillna(0.0)
+    )
 
     # Equity = Pnl.cumsum()
     merged["Equity"] = merged["Pnl"].fillna(0).cumsum()

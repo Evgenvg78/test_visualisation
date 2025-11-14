@@ -45,7 +45,9 @@ class EquityReport:
             return f"{value:.{precision}f}"
 
         def fmt_ts(ts: Optional[pd.Timestamp]) -> str:
-            return ts.strftime("%Y-%m-%d %H:%M") if ts is not None else "—"
+            if ts is None or pd.isna(ts):
+                return "—"
+            return ts.strftime("%Y-%m-%d %H:%M")
 
         clr = "🟢" if self.return_percent >= 0 else "🔴"
         dd_line = (

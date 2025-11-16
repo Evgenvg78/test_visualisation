@@ -57,7 +57,6 @@ class CombinedEquityResult:
 def combine_equity_logs(
     log_paths: Sequence[PathLike[str]],
     *,
-    resample_rule: Optional[str] = None,
     process_kwargs: Optional[Mapping[str, Any]] = None,
     timezone: Optional[str] = None,
     build_plot: bool = False,
@@ -68,7 +67,6 @@ def combine_equity_logs(
 
     Args:
         log_paths: paths to trade log CSVs.
-        resample_rule: optional resampling rule for the combined frame.
         process_kwargs: extra arguments forwarded to process_log_v2.
         timezone: target timezone for timestamps (if not None).
         build_plot: build a Plotly figure that overlays all series plus the total.
@@ -106,7 +104,7 @@ def combine_equity_logs(
     if not snapshots:
         raise ValueError("No equity data was produced by any of the logs")
 
-    combined_df = _build_combined_dataframe(snapshots, resample_rule=resample_rule)
+    combined_df = _build_combined_dataframe(snapshots)
     go_requirement = _total_go(snapshots)
     total_commission = _total_commission(snapshots)
     metrics = _build_metrics(combined_df, go_requirement, total_commission)
@@ -118,7 +116,15 @@ def combine_equity_logs(
         per = {
             col: combined_df.set_index("date_time")[col] for col in instr_columns
         }
-        figure = _build_plot(per, total_series, title=plot_title)
+        column_labels = _instrument_labels(
+            snapshots, existing_columns=set(instr_columns)
+        )
+        figure = _build_plot(
+            per,
+            total_series,
+            title=plot_title,
+            instrument_labels=column_labels,
+        )
 
     return CombinedEquityResult(
         combined=combined_df,
@@ -189,8 +195,6 @@ def _unique_column_name(base: str, existing: set[str]) -> str:
 
 def _build_combined_dataframe(
     snapshots: Sequence[LogEquitySnapshot],
-    *,
-    resample_rule: Optional[str],
 ) -> pd.DataFrame:
     idx = snapshots[0].series.index
     for snap in snapshots[1:]:
@@ -212,18 +216,22 @@ def _build_combined_dataframe(
         raise ValueError("Unable to build any columns for the combined Equity frame")
 
     builder["Equity"] = builder[columns].sum(axis=1)
-    if resample_rule:
-        builder = (
-            builder.resample(resample_rule)
-            .last()
-            .dropna(how="all")
-        )
-        if builder.empty:
-            raise ValueError("Resample dropped all equity rows")
-        builder["Equity"] = builder[columns].sum(axis=1)
-
     builder = builder.reset_index().rename(columns={"index": "date_time"})
     return builder
+
+
+def _instrument_labels(
+    snapshots: Sequence[LogEquitySnapshot],
+    *,
+    existing_columns: set[str],
+) -> dict[str, str]:
+    seen: set[str] = set()
+    labels: dict[str, str] = {}
+    for snap in snapshots:
+        column = _unique_column_name(snap.ticker, seen)
+        if column in existing_columns:
+            labels[column] = snap.log_path.stem
+    return labels
 
 
 def _instrument_columns(combined: pd.DataFrame) -> list[str]:
@@ -247,6 +255,12 @@ def _build_metrics(
     go_requirement: float,
     total_commission: float,
 ) -> CombinedEquityMetrics:
+    combined = combined.copy()
+    if "Equity" not in combined.columns:
+        instrument_cols = _instrument_columns(combined)
+        if not instrument_cols:
+            raise ValueError("Combined frame lacks both a total equity column and instrument columns")
+        combined["Equity"] = combined[instrument_cols].sum(axis=1)
     timestamps = combined["date_time"]
     equity_series = combined["Equity"].astype(float)
     drawdown_currency, dd_start, dd_end = _max_drawdown(equity_series, timestamps)
@@ -282,23 +296,35 @@ def _build_plot(
     total_series: pd.Series,
     *,
     title: str,
+    instrument_labels: Optional[Mapping[str, str]] = None,
 ) -> Optional[Any]:
     try:
         import plotly.graph_objects as go
+        from plotly.subplots import make_subplots
     except ImportError:
         logger.debug("plotly is not installed, skipping combined equity plot")
         return None
 
-    fig = go.Figure()
+    fig = make_subplots(
+        rows=2,
+        cols=1,
+        shared_xaxes=True,
+        row_heights=[0.5, 0.5],
+        vertical_spacing=0.05,
+    )
     for name, series in instrument_series.items():
         fig.add_trace(
             go.Scattergl(
                 x=series.index,
                 y=series.values,
                 mode="lines",
-                name=name,
+                name=instrument_labels.get(name, name)
+                if instrument_labels is not None
+                else name,
                 line=dict(width=1),
-            )
+            ),
+            row=2,
+            col=1,
         )
     fig.add_trace(
         go.Scattergl(
@@ -307,13 +333,15 @@ def _build_plot(
             mode="lines",
             name="Total Equity",
             line=dict(width=2, color="black"),
-        )
+        ),
+        row=1,
+        col=1,
     )
     fig.update_layout(
         title=title,
         margin=dict(l=40, r=40, t=40, b=40),
         width=1000,
-        height=500,
+        height=700,
         legend=dict(orientation="h", y=1.02, x=0),
     )
     return fig

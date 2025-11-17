@@ -141,16 +141,17 @@ def main() -> None:
         st.header("Настройки")
         if folder_key not in st.session_state:
             st.session_state[folder_key] = state.get("folder", "")
+        if st.button("Выбрать папку через проводник"):
+            selected = pick_folder_dialog()
+            if selected:
+                st.session_state[folder_key] = selected
+                st.rerun()
         folder_input = st.text_input(
             "Папка с логами",
             value=st.session_state[folder_key],
             placeholder="Например: C:/data/logs",
             key=folder_key,
         )
-        if st.button("Выбрать папку через проводник"):
-            selected = pick_folder_dialog()
-            if selected:
-                st.session_state[folder_key] = selected
 
         if commission_key not in st.session_state:
             st.session_state[commission_key] = state.get("commission", DEFAULT_COMMISSION)

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 STATE_FILE = Path("help_data/dashboard_state.json")
 LOG_EXTENSIONS = ("*t.csv",)
-DEFAULT_COMMISSION = 0.0
+DEFAULT_COMMISSION = 0.5
 DEFAULT_MODE = "Комбинация"
 # ---------- Persistence helpers ----------
 def _load_state() -> dict:
@@ -129,8 +129,8 @@ def main() -> None:
     st.set_page_config(page_title="Equity Dashboard", layout="wide")
 
     state = _load_state()
-    st.title("Equity Dashboard (Streamlit)")
-    st.caption("Минималистичный дашборд для логов торговли с комбинированными графиками Plotly.")
+    st.title("Визуализация Equity из логов торговли <log>t.csv")
+    st.caption("Данный сервис помогает визуализировать эквити из логов торговли, скачивает минутки для построения полной картины и объединяет в одну кривую.")
 
     folder_key = "dashboard_folder"
     commission_key = "dashboard_commission"
@@ -221,8 +221,13 @@ def main() -> None:
         st.info("Выберите хотя бы один файл.")
         return
 
-    run = st.button("Обновить графики")
-    if not run:
+    run_state_key = "dashboard_run_requested"
+    if run_state_key not in st.session_state:
+        st.session_state[run_state_key] = False
+    run_clicked = st.button("Обновить графики")
+    if run_clicked:
+        st.session_state[run_state_key] = True
+    if not st.session_state.get(run_state_key, False):
         st.stop()
 
     status = st.empty()
@@ -267,9 +272,11 @@ def main() -> None:
     if mode == "Комбинация":
         st.write("Используется объединённая кривая из выбранных логов.")
     else:
+        expander_keys = [f"expander_{snap.log_path.stem}" for snap in result.per_logs]
         if st.button("Развернуть все"):
-            for snap in result.per_logs:
-                st.session_state[f"expander_{snap.log_path.stem}"] = True
+            for key in expander_keys:
+                if not st.session_state.get(key, False):
+                    st.session_state[key] = True
         for snap in result.per_logs:
             exp_key = f"expander_{snap.log_path.stem}"
             if exp_key not in st.session_state:

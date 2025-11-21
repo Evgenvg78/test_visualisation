@@ -16,3 +16,4 @@ __pycache__/
 # Data folders
 OHCL/
 trade_data/
+setup_test_visualiser/

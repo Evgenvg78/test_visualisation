@@ -1,29 +1,41 @@
-# Packaging workspace for test_visualiser
+# Сборка исполняемого файла
 
-This folder mirrors the runtime snapshot that becomes the standalone executable.
+Эта папка содержит только инфраструктуру сборки (`build_exe.ps1`, `launch_app.py`, документацию и артефакты PyInstaller). Все рабочие файлы (`app.py`, `src/`, данные) подтягиваются напрямую из корня проекта, поэтому копировать их сюда не нужно.
 
-## Updating before a rebuild
-1. Copy `app.py`, `src/`, and any assets (`help_data/`, additional configs) from the main repo into this directory so the packaged inputs reflect your latest changes.
-2. Keep `help_data/dashboard_state.json` or regenerate it with the running app if you need to reset saved state.
+## Что помещается в exe
+- код Streamlit (`app.py` и весь `src/`);
+- служебные данные из `help_data/` (используются как шаблон при первом запуске);
+- запускающий скрипт `launch_app.py`, который:
+  - разворачивает рабочую директорию в `%LOCALAPPDATA%\test_visualiser` (сюда кладутся состояния, OHCL, выгрузки и т.п.);
+  - при необходимости добавляет в неё отсутствующие файлы из `help_data`;
+  - запускает `streamlit run` над оригинальным `app.py` из архива и автоматически открывает браузер.
 
-## Preparing the environment
+Подробный состав см. в `runtime_manifest.md`.
+
+## Требования
+1. Python 3.10+ (из твоего `.venv`).
+2. В корне проекта выполнено `pip install -r requirements.txt`.
+3. Для сборки поставлены инструменты: `pip install pyinstaller pyinstaller-hooks-contrib`.
+
+> Из виртуального окружения PowerShell выходи командой `deactivate`.
+
+## Команда сборки
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\pip install -r requirements.txt
-.\.venv\Scripts\pip install -r build_requirements.txt
+cd setup_test_visualiser
+.\build_exe.ps1 -Clean -PythonExe ..\.venv\Scripts\python.exe
 ```
 
-## Building the executable
-```powershell
-# run from inside setup_test_visualiser
-.\build_exe.ps1 -Clean
-```
+Скрипт по умолчанию использует `launch_app.py` как точку входа, добавляет в архив `app.py`, `src/`, `help_data/` и коллекционирует ресурсы `streamlit`. Готовый файл лежит в `setup_test_visualiser\dist\test_visualiser.exe`.
 
-The script calls PyInstaller with `--onefile` and includes `help_data/`. The resulting executable lands in `dist/test_visualiser.exe`.
+## Рабочий цикл
+1. Меняешь код в корневом проекте.
+2. (При необходимости) активируешь `.venv` и обновляешь зависимости.
+3. Запускаешь `.\build_exe.ps1 -Clean -PythonExe ..\.venv\Scripts\python.exe`.
+4. Распространяешь свежий `dist\test_visualiser.exe`.
 
-## Quick iterative flow
-1. Update sources (copy from the repo or edit directly inside this folder).
-2. Run `.\build_exe.ps1` (add `-Clean` if PyInstaller artifacts should be dropped first).
-3. Share `dist/test_visualiser.exe` with colleagues; it embeds the bundled python runtime.
+### Где искать пользовательские данные
+- После запуска exe рабочая папка создаётся в `%LOCALAPPDATA%\test_visualiser`.
+- Файл состояния (`help_data\dashboard_state.json`), выгрузки CSV и кэш OHCL лежат там же, поэтому при обновлении exe данные сохраняются.
+- Чтобы сбросить состояние, можно удалить соответствующие файлы из этой папки (exe при следующем старте подставит шаблон из дистрибутива).
 
-If you need to tweak hidden imports or extra data directories, edit `build_exe.ps1` and rerun.
+Если понадобятся дополнительные ресурсы/модули, добавь их в `build_exe.ps1` (например, ещё один `--add-data` или `--collect-all`).

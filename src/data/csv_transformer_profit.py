@@ -93,22 +93,46 @@ Returns:
         raise FileNotFoundError(f"Файл не найден: {file_path}")
 
     # Читаем CSV с предустановленной кодировкой и разделителем
-    df = pd.read_csv(src, encoding="cp1251", sep=";")
-
-    # Определяем фактические имена столбцов, поддерживая несколько вариантов заголовков
+    # ????????? CSV, ?????? ????????? ????????? ? ???????? ??????? ???????
+    df = None
     resolved_columns = {}
-    missing_variants = {}
-    for key, aliases in _COLUMN_ALIASES.items():
+    last_missing_error = None
+    for encoding in ("cp1251", "utf-8", "utf-8-sig"):
         try:
-            resolved_columns[key] = _resolve_column(df.columns, aliases)
-        except ValueError:
-            missing_variants[key] = aliases
+            candidate = pd.read_csv(src, encoding=encoding, sep=";")
+        except UnicodeDecodeError:
+            continue
 
-    if missing_variants:
-        details = "; ".join(
-            f"{key}: {', '.join(variants)}" for key, variants in missing_variants.items()
+        resolved_columns = {}
+        missing_variants = {}
+        for key, aliases in _COLUMN_ALIASES.items():
+            try:
+                resolved_columns[key] = _resolve_column(candidate.columns, aliases)
+            except ValueError:
+                missing_variants[key] = aliases
+
+        if missing_variants:
+            details = "; ".join(
+                f"{key}: {', '.join(variants)}" for key, variants in missing_variants.items()
+            )
+            last_missing_error = ValueError(
+                f"?? ??????? ???????????? ???????. ????????? -> {details}"
+            )
+            continue
+
+        df = candidate
+        break
+
+    if df is None:
+        if last_missing_error is not None:
+            raise last_missing_error
+        raise UnicodeDecodeError(
+            "csv_transformer_profit",
+            b"",
+            0,
+            1,
+            "Failed to decode CSV using supported encodings",
         )
-        raise ValueError(f"Не найдены необходимые столбцы. Ожидались варианты -> {details}")
 
     date_col = resolved_columns["date_time"]
     price_col = resolved_columns["price"]

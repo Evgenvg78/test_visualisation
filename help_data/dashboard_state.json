@@ -1,6 +1,6 @@
 {
-  "folder": "C:/Quik_Alor/lua/logs",
+  "folder": "C:\\Quik_Alor\\lua\\logs",
   "commission": 0.5,
-  "mode": "По одному",
-  "mask": ""
+  "mode": "По каждому логу",
+  "mask": "*t.csv"
 }

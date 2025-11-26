@@ -9,22 +9,26 @@ Features:
 """
 from __future__ import annotations
 
-import fnmatch
 import json
 import logging
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence
+from typing import Iterable, Optional, Sequence, Tuple
 
 import streamlit as st
 
-from src.equity_combination import CombinedEquityResult, LogEquitySnapshot, combine_equity_logs
+from src.equity_combination import CombinedEquityResult, LogEquitySnapshot
+from src.services import LogFileInfo, build_equity_bundle, discover_logs
 
 logger = logging.getLogger(__name__)
 
 STATE_FILE = Path("help_data/dashboard_state.json")
-LOG_EXTENSIONS = ("*t.csv",)
 DEFAULT_COMMISSION = 0.5
-DEFAULT_MODE = "Комбинация"
+DEFAULT_MASK = "*t.csv"
+LOGS_STATE_KEY = "logs"
+RESULT_STATE_KEY = "result"
+DESCRIPTORS_STATE_KEY = "last_descriptors"
+
+
 # ---------- Persistence helpers ----------
 def _load_state() -> dict:
     if not STATE_FILE.exists():
@@ -42,39 +46,49 @@ def _save_state(data: dict) -> None:
     except Exception:
         logger.exception("Failed to save dashboard state")
 
-# ---------- File discovery ----------
-def list_log_files(folder: Path, extensions: Sequence[str] = LOG_EXTENSIONS) -> List[Path]:
-    if not folder.exists():
-        return []
-    files: list[Path] = []
-    for ext in extensions:
-        # Allow wildcards like "*t.csv"
-        pattern = ext if any(ch in ext for ch in "*?") else f"*{ext}"
-        files.extend(folder.glob(pattern))
-    return sorted({f.resolve() for f in files if f.is_file()})
 
-
-def apply_mask(files: Sequence[Path], mask: str) -> list[Path]:
-    """Filter filenames by glob-like mask, case-insensitive."""
-    if not mask.strip():
-        return list(files)
-    normalized = mask.strip()
-    return [p for p in files if fnmatch.fnmatch(p.name.lower(), normalized.lower())]
-
-
-def pick_folder_dialog() -> Optional[str]:
-    """Open native folder picker."""
+def _prompt_for_folder(initial_path: Optional[str] = None) -> Optional[str]:
+    """Show a native folder picker and return the chosen directory."""
     try:
         import tkinter as tk
         from tkinter import filedialog
-    except ImportError:
+    except Exception:
+        logger.exception("Tkinter is not available for folder selection")
         return None
+
     root = tk.Tk()
     root.withdraw()
     root.attributes("-topmost", True)
-    folder = filedialog.askdirectory()
-    root.destroy()
-    return folder if folder else None
+    try:
+        initial_dir = None
+        if initial_path:
+            candidate = Path(initial_path).expanduser()
+            if candidate.exists():
+                initial_dir = str(candidate)
+        selected = filedialog.askdirectory(initialdir=initial_dir)
+    finally:
+        root.destroy()
+
+    if not selected:
+        return None
+    return str(Path(selected))
+
+
+# ---------- File discovery ----------
+def _get_log_infos() -> list[LogFileInfo]:
+    return list(st.session_state.get(LOGS_STATE_KEY, []))
+
+
+def _set_log_infos(infos: Sequence[LogFileInfo]) -> None:
+    st.session_state[LOGS_STATE_KEY] = list(infos)
+
+
+def _build_log_descriptors(logs: Sequence[LogFileInfo]) -> Tuple[Tuple[str, float], ...]:
+    """Return tuples (absolute_path, mtime) for caching."""
+    descriptors: list[Tuple[str, float]] = []
+    for info in logs:
+        descriptors.append((str(Path(info.path).resolve()), float(info.mtime)))
+    return tuple(descriptors)
 
 
 # ---------- Visualization helpers ----------
@@ -83,7 +97,7 @@ def plot_per_log(snapshot: LogEquitySnapshot):
 
     df = snapshot.equity
     if "Equity" not in df.columns:
-        st.warning(f"В логе {snapshot.log_path.name} нет столбца Equity")
+        st.warning(f"В файле {snapshot.log_path.name} нет столбца Equity.")
         return None
     fig = go.Figure()
     fig.add_trace(
@@ -114,14 +128,25 @@ def plot_per_log(snapshot: LogEquitySnapshot):
     return fig
 
 
-@st.cache_data(show_spinner=False)
-def process_logs(log_paths: Iterable[Path], commission: float) -> CombinedEquityResult:
-    return combine_equity_logs(
-        log_paths,
-        process_kwargs={"comis": commission, "build_equity_report": True},
+def _process_logs(log_paths: Iterable[Path], commission: float) -> CombinedEquityResult:
+    paths = [Path(p) for p in log_paths]
+    cache_key = ';'.join(str(p.resolve()) for p in paths)
+    return build_equity_bundle(
+        paths,
+        comis=commission,
+        tz=None,
+        cache_key=cache_key,
         build_plot=True,
-        plot_title="Общая кривая Equity",
     )
+
+
+@st.cache_data(show_spinner=False)
+def process_logs_cached(
+    log_descriptors: Tuple[Tuple[str, float], ...],
+    commission: float,
+) -> CombinedEquityResult:
+    log_paths = [Path(path_str) for path_str, _ in log_descriptors]
+    return _process_logs(log_paths, commission)
 
 
 # ---------- UI ----------
@@ -129,29 +154,45 @@ def main() -> None:
     st.set_page_config(page_title="Equity Dashboard", layout="wide")
 
     state = _load_state()
-    st.title("Визуализация Equity из логов торговли <log>t.csv")
-    st.caption("Данный сервис помогает визуализировать эквити из логов торговли, скачивает минутки для построения полной картины и объединяет в одну кривую.")
+    st.title("Дашборд Equity")
+    st.caption("Загружайте CSV-логи, объединяйте их и просматривайте отчёты напрямую в Streamlit.")
 
     folder_key = "dashboard_folder"
     commission_key = "dashboard_commission"
     mask_key = "dashboard_mask"
-    mode_key = "dashboard_mode"
-
     with st.sidebar:
-        st.header("Настройки")
+        st.header("Параметры запуска")
+        folder_pending_key = "_dashboard_folder_pending"
+        folder_feedback_key = "_dashboard_folder_feedback"
+        if folder_pending_key in st.session_state:
+            st.session_state[folder_key] = st.session_state.pop(folder_pending_key)
         if folder_key not in st.session_state:
             st.session_state[folder_key] = state.get("folder", "")
-        if st.button("Выбрать папку через проводник"):
-            selected = pick_folder_dialog()
-            if selected:
-                st.session_state[folder_key] = selected
-                st.rerun()
         folder_input = st.text_input(
             "Папка с логами",
             value=st.session_state[folder_key],
             placeholder="Например: C:/data/logs",
             key=folder_key,
         )
+
+        if st.button("Выбрать папку через проводник", key="pick_logs_folder"):
+            selected_folder = _prompt_for_folder(st.session_state.get(folder_key))
+            if selected_folder:
+                st.session_state[folder_pending_key] = selected_folder
+                st.session_state[folder_feedback_key] = ("success", "Папка успешно обновлена.")
+            else:
+                st.session_state[folder_feedback_key] = ("info", "Папка не была выбрана.")
+            st.rerun()
+
+        feedback = st.session_state.pop(folder_feedback_key, None)
+        if feedback:
+            level, message = feedback
+            if level == "success":
+                st.success(message)
+            elif level == "info":
+                st.info(message)
+            else:
+                st.write(message)
 
         if commission_key not in st.session_state:
             st.session_state[commission_key] = state.get("commission", DEFAULT_COMMISSION)
@@ -164,164 +205,169 @@ def main() -> None:
         )
 
         if mask_key not in st.session_state:
-            st.session_state[mask_key] = state.get("mask", "")
+            st.session_state[mask_key] = state.get("mask", DEFAULT_MASK)
+        current_mask = st.session_state[mask_key]
+        if not str(current_mask).strip():
+            current_mask = DEFAULT_MASK
+            st.session_state[mask_key] = DEFAULT_MASK
         mask = st.text_input(
-            "Маска файлов (glob)",
-            value=st.session_state[mask_key],
-            placeholder="Например: Gld*",
-            help="Показывать только файлы, имя которых совпадает с маской (glob). По умолчанию — без фильтра.",
+            "Фильтр файлов (glob)",
+            value=current_mask,
+            placeholder="Например: *t.csv или Gold*.csv",
+            help="Используйте glob-шаблоны: *t.csv, Gold*.csv, 2024_* и т.д.",
             key=mask_key,
         )
+        normalized_mask = mask.strip() or DEFAULT_MASK
+        if normalized_mask != st.session_state[mask_key]:
+            st.session_state[mask_key] = normalized_mask
+        mask_value = normalized_mask
 
-        if mode_key not in st.session_state:
-            default_mode = state.get("mode", DEFAULT_MODE)
-            if default_mode not in {"Комбинация", "По одному"}:
-                default_mode = DEFAULT_MODE
-            st.session_state[mode_key] = default_mode
-        mode_options = ["Комбинация", "По одному"]
-        mode = st.selectbox(
-            "Режим отображения",
-            options=mode_options,
-            key=mode_key,
-        )
+        folder_path = Path(folder_input).expanduser() if folder_input else None
+        if st.button("Найти логи"):
+            if not folder_path or not folder_path.exists():
+                st.error("Укажите существующую папку с логами.")
+            else:
+                discovered = discover_logs(folder_path, mask_value)
+                _set_log_infos(list(discovered))
+                st.session_state.pop(RESULT_STATE_KEY, None)
+                st.session_state.pop(DESCRIPTORS_STATE_KEY, None)
+                st.success(f"Найдено {len(discovered)} логов.")
 
         if st.button("Сохранить настройки"):
             _save_state(
                 {
                     "folder": st.session_state[folder_key],
                     "commission": st.session_state[commission_key],
-                    "mode": st.session_state[mode_key],
                     "mask": st.session_state[mask_key],
                 }
             )
-            st.success("Настройки сохранены")
+            st.success("Настройки сохранены.")
 
-    folder_path = Path(folder_input).expanduser() if folder_input else None
-    if not folder_path or not folder_path.exists():
-        st.info("Укажите корректную папку с логами в сайдбаре.")
+    available_logs = _get_log_infos()
+    if not available_logs:
+        st.info("Добавьте логи через панель слева и нажмите «Найти логи», чтобы увидеть список файлов.")
         return
 
-    files = list_log_files(folder_path)
-    files = apply_mask(files, mask)
-    if not files:
-        st.warning("В указанной папке не найдено файлов, подходящих под маску (*.t.csv по умолчанию).")
-        return
-
-    # Main selection
-    st.subheader("Выбор логов")
-    options = {f"{p.name}": p for p in files}
+    st.subheader("Выбор логов для анализа")
+    option_map = {
+        f"[{idx + 1}] {info.path.name} - {Path(info.path).parent}": info
+        for idx, info in enumerate(available_logs)
+    }
+    options = list(option_map.keys())
+    default_selection = options[: min(len(options), 3)]
     selected_labels = st.multiselect(
-        "Файлы для анализа",
-        options=list(options.keys()),
-        default=list(options.keys())[:1],
+        "Выберите файлы, которые нужно объединить",
+        options=options,
+        default=default_selection,
     )
-    selected_files = [options[label] for label in selected_labels]
+    selected_infos = [option_map[label] for label in selected_labels]
 
-    if not selected_files:
-        st.info("Выберите хотя бы один файл.")
+    if not selected_infos:
+        st.info("Отметьте хотя бы один лог, чтобы продолжить.")
         return
 
-    run_state_key = "dashboard_run_requested"
-    if run_state_key not in st.session_state:
-        st.session_state[run_state_key] = False
-    run_clicked = st.button("Обновить графики")
-    if run_clicked:
-        st.session_state[run_state_key] = True
-    if not st.session_state.get(run_state_key, False):
-        st.stop()
+    st.write("1) Обновите список логов после изменения параметров. 2) Нажмите «Запустить анализ».")
+    run_clicked = st.button("Запустить анализ", type="primary")
+    descriptors = _build_log_descriptors(selected_infos)
+    cached_descriptors = st.session_state.get(DESCRIPTORS_STATE_KEY)
+    result: Optional[CombinedEquityResult] = st.session_state.get(RESULT_STATE_KEY)
 
-    status = st.empty()
-    progress = st.progress(0.0)
-    try:
-        status.info("Загружаются данные OHCL из интернета . . .")
-        progress.progress(0.33)
-        result = process_logs(selected_files, commission)
-        status.info("Формируется отчёт . . .")
-        progress.progress(0.66)
-        status.info("Формируется график . . .")
-        progress.progress(0.9)
-    except Exception as exc:
-        status.error(f"Не удалось обработать логи: {exc}")
+    if run_clicked or result is None or cached_descriptors != descriptors:
+        if not run_clicked:
+            st.info("Параметры изменились — нажмите «Запустить анализ» ещё раз.")
+            return
+
+        status = st.empty()
+        progress = st.progress(0.0)
+        try:
+            status.info("Обрабатываем выбранные файлы...")
+            progress.progress(0.3)
+            result = process_logs_cached(descriptors, commission)
+            st.session_state[RESULT_STATE_KEY] = result
+            st.session_state[DESCRIPTORS_STATE_KEY] = descriptors
+            status.info("Готовим графики и метрики...")
+            progress.progress(0.7)
+        except Exception as exc:
+            status.error(f"Не удалось обработать equity: {exc}")
+            return
+        finally:
+            progress.progress(1.0)
+        status.success("Готово!")
+    elif result is None:
+        st.info("Параметры изменились — нажмите «Запустить анализ» ещё раз.")
         return
-    finally:
-        progress.progress(1.0)
-    status.success("Готово!")
 
-    # Combined view
-    st.subheader("Комбинированная кривая")
+    st.subheader("Итоги по портфелю")
     metrics = result.metrics
     cols = st.columns(5)
-    cols[0].metric("GO", f"{metrics.go_requirement:,.0f}")
-    cols[1].metric("Equity итог", f"{metrics.final_equity:,.0f}")
-    cols[2].metric("Доходность, % GO", f"{metrics.return_percent:,.2f}")
-    cols[3].metric("ДД, % GO", f"{metrics.drawdown_percent_of_go:,.2f}")
-    cols[4].metric("Комиссия суммарно", f"{metrics.total_commission:,.2f}")
+    cols[0].metric("ГО", f"{metrics.go_requirement:,.0f}")
+    cols[1].metric("Equity (итог)", f"{metrics.final_equity:,.0f}")
+    cols[2].metric("Доходность, % ГО", f"{metrics.return_percent:,.2f}")
+    cols[3].metric("Просадка, % ГО", f"{metrics.drawdown_percent_of_go:,.2f}")
+    cols[4].metric("Комиссия", f"{metrics.total_commission:,.2f}")
 
     if result.figure is not None:
-        # Подсветить общую эквити красным цветом
         for trace in result.figure.data:
             if str(trace.name).lower().strip() in {"total equity", "equity"}:
                 if hasattr(trace, "line") and trace.line is not None:
                     trace.line.color = "red"
         st.plotly_chart(result.figure, use_container_width=True)
     else:
-        st.info("График не построен (plotly недоступен).")
+        st.info("График не построен — возможно, Plotly не смог обработать данные.")
 
-    # Mode switch
-    st.subheader(f"Режим: {mode}")
-    if mode == "Комбинация":
-        st.write("Используется объединённая кривая из выбранных логов.")
-    else:
-        expander_keys = [f"expander_{snap.log_path.stem}" for snap in result.per_logs]
-        if st.button("Развернуть все"):
-            for key in expander_keys:
-                if not st.session_state.get(key, False):
-                    st.session_state[key] = True
-        for snap in result.per_logs:
-            exp_key = f"expander_{snap.log_path.stem}"
-            if exp_key not in st.session_state:
-                st.session_state[exp_key] = False
-            expanded = st.session_state.get(exp_key, False)
-            with st.expander(f"{snap.log_path.name} ({snap.ticker})", expanded=expanded):
-                left, right = st.columns([2, 1])
-                fig = plot_per_log(snap)
-                if fig:
-                    left.plotly_chart(fig, use_container_width=True)
-                else:
-                    left.info("Не удалось построить график для этого лога.")
+    st.subheader("Детализация по каждому логу")
+    expander_keys = [f"expander_{snap.log_path.stem}" for snap in result.per_logs]
+    if st.button("Развернуть все блоки"):
+        for key in expander_keys:
+            if not st.session_state.get(key, False):
+                st.session_state[key] = True
+    for snap in result.per_logs:
+        exp_key = f"expander_{snap.log_path.stem}"
+        if exp_key not in st.session_state:
+            st.session_state[exp_key] = False
+        expanded = st.session_state.get(exp_key, False)
+        title = f"{snap.log_path.name} ({snap.ticker})"
 
-                if snap.report:
-                    report_lines = [
-                        f"- **Тикер:** {snap.report.ticker}",
-                        f"- **GO:** {snap.report.go_requirement:,.0f}",
-                        f"- **Финальная equity:** {snap.report.final_equity:,.0f}",
-                        f"- **Доходность:** {snap.report.return_percent:.2f}%",
-                        f"- **DD (валюта):** {snap.report.drawdown_currency:,.0f}",
-                        f"- **DD (% GO):** {snap.report.drawdown_percent_of_go:.2f}%",
-                        f"- **Сделки:** вход {snap.report.entry_count}, выход {snap.report.exit_count}",
-                        f"- **Закрытых:** {snap.report.closed_trades} сделок в {snap.report.closed_cycles} циклах",
-                        f"- **Комиссия:** {snap.report.total_commission:,.0f}",
-                    ]
-                    right.markdown("**Отчёт**")
-                    right.markdown("\n".join(report_lines))
-                else:
-                    right.info("Отчёт пока не собран.")
 
-                csv_bytes = snap.equity.to_csv(index=False).encode("utf-8")
-                right.download_button(
-                    label="Скачать CSV (equity)",
-                    data=csv_bytes,
-                    file_name=f"{snap.log_path.stem}_equity.csv",
-                    mime="text/csv",
-                    key=f"download_{snap.log_path.stem}",
-                )
+        with st.expander(title, expanded=expanded):
+            left, right = st.columns([2, 1])
+            fig = plot_per_log(snap)
+            if fig:
+                left.plotly_chart(fig, use_container_width=True)
+            else:
+                left.info("Нет данных для построения графика.")
 
-    # Tips
+            if snap.report:
+                report_lines = [
+                    f"- **Тикер:** {snap.report.ticker}",
+                    f"- **ГО:** {snap.report.go_requirement:,.0f}",
+                    f"- **Финальное equity:** {snap.report.final_equity:,.0f}",
+                    f"- **Доходность:** {snap.report.return_percent:.2f}%",
+                    f"- **Просадка (валюта):** {snap.report.drawdown_currency:,.0f}",
+                    f"- **Просадка (% ГО):** {snap.report.drawdown_percent_of_go:.2f}%",
+                    f"- **Сделки:** входов {snap.report.entry_count}, выходов {snap.report.exit_count}",
+                    f"- **Закрыто трейдов:** {snap.report.closed_trades}",
+                    f"- **Комиссия:** {snap.report.total_commission:,.0f}",
+                ]
+                right.markdown("**Отчёт**")
+                right.markdown("\n".join(report_lines))
+            else:
+                right.info("Отчёт по сделкам не найден.")
+
+            csv_bytes = snap.equity.to_csv(index=False).encode("utf-8")
+            right.download_button(
+                label="Скачать CSV (equity)",
+                data=csv_bytes,
+                file_name=f"{snap.log_path.stem}_equity.csv",
+                mime="text/csv",
+                key=f"download_{snap.log_path.stem}",
+            )
+
     st.info(
-        "Советы: \n"
-        "- Комиссия передаётся в обработку логов (`comis`).\n"
-        "- Настройки папки и режима можно сохранить в сайдбаре.\n"
-        "- При множественном выборе логов переключайте режим «Комбинация»/«По одному»."
+        "Подсказки:\n"
+        "- После изменения папки или маски обновите список логов, иначе анализ будет проводиться по предыдущему набору.\n"
+        "- Если файлов много, сократите выборку — это ускорит вычисления и уменьшит нагрузку на Plotly.\n"
+        "- Скачивайте CSV из каждого блока, чтобы разбирать equity во внешних инструментах."
     )
 
 

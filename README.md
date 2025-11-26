@@ -23,9 +23,16 @@ This project downloads and processes financial data from the Moscow Exchange (MO
    .\init_project.ps1
    ```
 
-2. Install dependencies:
+2. Установите зависимости под нужный сценарий:
    ```bash
-   pip install -r requirements.txt
+   # Минимальное ядро (CLI/сервисы)
+   pip install -r requirements-base.txt
+
+   # Streamlit UI + CLI
+   pip install -r requirements-ui.txt
+
+   # Разработка/линтинг/сборка (включает всё выше)
+   pip install -r requirements-dev.txt
    ```
 
 ## Usage
@@ -46,8 +53,24 @@ This will create a CSV file at `src/data/moex_tickers_steps.csv` with the latest
 python -m pytest tests/ -v
 ```
 
+### PyInstaller Bundles
+
+Готовые спецификации лежат в каталоге `pyinstaller/`:
+
+- `pyinstaller/cli.spec` — headless CLI (`scripts/combine_equity.py`).
+- `pyinstaller/streamlit.spec` — Streamlit dashboard через раннер `scripts/run_streamlit_dashboard.py`.
+
+Сборка выполняется командой:
+
+```bash
+pyinstaller pyinstaller/cli.spec
+pyinstaller pyinstaller/streamlit.spec
+```
+
+Артефакты появятся в `dist/combine_equity/` и `dist/streamlit_dashboard/`.
+
 ## Dependencies
 
-- pandas: Data processing
-- requests: HTTP requests to MOEX API
-- pytest: Testing framework
+- `requirements-base.txt`: pandas, requests, moexalgo — всё, что нужно для расчётов и CLI.
+- `requirements-ui.txt`: дополняет base Streamlit'ом и Plotly.
+- `requirements-dev.txt`: добавляет инструменты разработки (pytest, black, isort, flake8, PyInstaller, pre-commit).

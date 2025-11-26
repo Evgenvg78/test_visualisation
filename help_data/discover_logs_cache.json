@@ -1,0 +1,928 @@
+{
+  "path": "C:\\Quik_Alor\\lua\\logs",
+  "mask": "*t.csv",
+  "mtimes": [
+    [
+      "C:\\Quik_Alor\\lua\\logs\\CHECK_GLD_RW_trend_1_8-10-1-25_slopet.csv",
+      1762762649.7827985
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\CHECK_GLD_RW_trend_1_8-10-1-25t.csv",
+      1762758914.85744
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\CHECK_GLD_RW_trend_1_9-5-3_slopet.csv",
+      1762771278.7837737
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\CHECK_GLD_RW_trend_1t.csv",
+      1762718126.3802612
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\CHECK_GLD_RW_trend_originalt.csv",
+      1762841270.5154598
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\CNYRUBF_test_nowt.csv",
+      1762161340.0905485
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\CNYRUBF_эталон_volMed_1_07_10_1_2t.csv",
+      1760953081.2226963
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\CNYRUBF_эталон_volMed_1_07_10_1t.csv",
+      1762448712.8267403
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_experiment1t.csv",
+      1762781700.3391614
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_1_notBAD_1_nolocalt.csv",
+      1762698624.3315961
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_1_notBAD_1t.csv",
+      1762684426.774853
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_1_notBAD_nolocalt.csv",
+      1762778100.6379268
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_1_notBADt.csv",
+      1762679461.605038
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_1t.csv",
+      1762134194.524143
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_2_notBAD_2t.csv",
+      1762698623.2434094
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_2_notBAD_nolocal_116t.csv",
+      1762706569.3179853
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_2_notBAD_nolocal_11t.csv",
+      1762710251.239112
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_2_notBAD_nolocal_INTUIT1t.csv",
+      1762715268.0933838
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_2_notBAD_nolocalt.csv",
+      1762700434.0410943
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_2_notBADt.csv",
+      1762679463.7662053
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_2t.csv",
+      1762134194.524143
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_3_notBAD_3t.csv",
+      1762698616.315258
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_3_notBAD_nolocal_tryt.csv",
+      1762754409.7563283
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_3_notBAD_nolocalt.csv",
+      1762700417.2645025
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_3_notBADt.csv",
+      1762679465.145561
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_3t.csv",
+      1761894627.8906488
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_4_notBAD_4t.csv",
+      1762698628.464866
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_4_notBAD_nolocalt.csv",
+      1762778280.7004821
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_4_notBADt.csv",
+      1762679463.8123207
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_4t.csv",
+      1762134194.524143
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_5_notBAD_5t.csv",
+      1762698629.1368465
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_5_notBAD_nolocalt.csv",
+      1762778100.6384804
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_5_notBADt.csv",
+      1762679468.6319597
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_5t.csv",
+      1761723603.8485265
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_6_notBAD_6t.csv",
+      1762698614.831984
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_6_notBAD_nolocalt.csv",
+      1762778100.636871
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_6_notBADt.csv",
+      1762679476.745093
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_6t.csv",
+      1761900601.2965283
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1t.csv",
+      1762511850.7790449
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test_notBAD_origt.csv",
+      1763107873.739234
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\IMOEX_test_notBADt.csv",
+      1762538464.091226
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\RM_tr_Workt.csv",
+      1760026053.3312466
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\RMU5_simple_trend_RWt.csv",
+      1759989700.944932
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\SiBDt.csv",
+      1760003764.4088352
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_+localt.csv",
+      1762781652.2422867
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_11_11_tryt.csv",
+      1762867457.9763799
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_1t.csv",
+      1762841270.317324
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR4_zt.csv",
+      1763101833.6942468
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR5_zt.csv",
+      1763106547.6139295
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR6_zt.csv",
+      1763100904.1023989
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR7_zt.csv",
+      1763059431.6123376
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR8_zt.csv",
+      1763059437.97418
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR9_zt.csv",
+      1763190869.570861
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_10_600_2t.csv",
+      1763465731.3730712
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_11_200_15t.csv",
+      1763466995.3957193
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_5_10_9t.csv",
+      1763552102.2283978
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_5_2_4t.csv",
+      1763466818.688311
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_5_300_15t.csv",
+      1763554902.245314
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_5_40_25t.csv",
+      1763550601.5030167
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_5_5_30t.csv",
+      1764057210.5971873
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_8_40_5t.csv",
+      1763465743.3649018
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_1_1Lt.csv",
+      1762866976.8617506
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_1_1t.csv",
+      1762859708.9015334
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_1t.csv",
+      1762848810.6495128
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_2_1Lt.csv",
+      1762866981.4250207
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_2_1t.csv",
+      1762859704.1390488
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_2t.csv",
+      1762848808.8884182
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_3_1Lt.csv",
+      1762866970.9250472
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_3_1t.csv",
+      1762859716.432169
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_3t.csv",
+      1762848808.4231453
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_4_1Lt.csv",
+      1762866937.7127745
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_4_1t.csv",
+      1762859705.5015357
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_4t.csv",
+      1762848801.1153107
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_5_1Lt.csv",
+      1762866960.3473809
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_5_1t.csv",
+      1762859705.8283658
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_5t.csv",
+      1762848808.2989376
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_6_1Lt.csv",
+      1762866913.2731006
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_6_1t.csv",
+      1762859713.6942198
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_6t.csv",
+      1762848792.768471
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_VOLPERC_1_2_140t.csv",
+      1764150585.0839932
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_IMOEX_CL_2t.csv",
+      1763399556.7334292
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_IMOEX_CLt.csv",
+      1763386036.3160417
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_Si_spread_FLt.csv",
+      1764063508.3106434
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\T_si_spread_tryt.csv",
+      1764066210.9049566
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\TEST_CNYRUBF_first_look__3__20250918_203041t.csv",
+      1760103181.5307212
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\TEST_CNYRUBF_first_look__3t.csv",
+      1758216604.5619102
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\TEST_CNYRUBF_first_lookt.csv",
+      1757089783.0700867
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\TEST_GLD_first_look_4173t.csv",
+      1755782558.1846075
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\TEST_GLD_first_look_5400_0t.csv",
+      1756316818.575127
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\TEST_GLD_first_look_6900_15t.csv",
+      1757064067.4328032
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\TEST_GLD_first_look_new — 690t.csv",
+      1756908685.1394715
+    ],
+    [
+      "C:\\Quik_Alor\\lua\\logs\\WORK_GLD_RW_trendt.csv",
+      1762533602.3736317
+    ]
+  ],
+  "files": [
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\CHECK_GLD_RW_trend_1_8-10-1-25_slopet.csv",
+      "mtime": 1762762649.7827985,
+      "size": 14440,
+      "ticker": "CHECK"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\CHECK_GLD_RW_trend_1_8-10-1-25t.csv",
+      "mtime": 1762758914.85744,
+      "size": 35908,
+      "ticker": "CHECK"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\CHECK_GLD_RW_trend_1_9-5-3_slopet.csv",
+      "mtime": 1762771278.7837737,
+      "size": 22053,
+      "ticker": "CHECK"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\CHECK_GLD_RW_trend_1t.csv",
+      "mtime": 1762718126.3802612,
+      "size": 40641,
+      "ticker": "CHECK"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\CHECK_GLD_RW_trend_originalt.csv",
+      "mtime": 1762841270.5154598,
+      "size": 42188,
+      "ticker": "CHECK"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\CNYRUBF_test_nowt.csv",
+      "mtime": 1762161340.0905485,
+      "size": 221436,
+      "ticker": "CNYRUBF"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\CNYRUBF_эталон_volMed_1_07_10_1_2t.csv",
+      "mtime": 1760953081.2226963,
+      "size": 151970,
+      "ticker": "CNYRUBF"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\CNYRUBF_эталон_volMed_1_07_10_1t.csv",
+      "mtime": 1762448712.8267403,
+      "size": 153702,
+      "ticker": "CNYRUBF"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_experiment1t.csv",
+      "mtime": 1762781700.3391614,
+      "size": 18818,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_1_notBAD_1_nolocalt.csv",
+      "mtime": 1762698624.3315961,
+      "size": 48075,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_1_notBAD_1t.csv",
+      "mtime": 1762684426.774853,
+      "size": 23310,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_1_notBAD_nolocalt.csv",
+      "mtime": 1762778100.6379268,
+      "size": 33149,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_1_notBADt.csv",
+      "mtime": 1762679461.605038,
+      "size": 23457,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_1t.csv",
+      "mtime": 1762134194.524143,
+      "size": 14528,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_2_notBAD_2t.csv",
+      "mtime": 1762698623.2434094,
+      "size": 44897,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_2_notBAD_nolocal_116t.csv",
+      "mtime": 1762706569.3179853,
+      "size": 64016,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_2_notBAD_nolocal_11t.csv",
+      "mtime": 1762710251.239112,
+      "size": 33237,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_2_notBAD_nolocal_INTUIT1t.csv",
+      "mtime": 1762715268.0933838,
+      "size": 70976,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_2_notBAD_nolocalt.csv",
+      "mtime": 1762700434.0410943,
+      "size": 44261,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_2_notBADt.csv",
+      "mtime": 1762679463.7662053,
+      "size": 23648,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_2t.csv",
+      "mtime": 1762134194.524143,
+      "size": 16066,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_3_notBAD_3t.csv",
+      "mtime": 1762698616.315258,
+      "size": 40594,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_3_notBAD_nolocal_tryt.csv",
+      "mtime": 1762754409.7563283,
+      "size": 14631,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_3_notBAD_nolocalt.csv",
+      "mtime": 1762700417.2645025,
+      "size": 16692,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_3_notBADt.csv",
+      "mtime": 1762679465.145561,
+      "size": 22731,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_3t.csv",
+      "mtime": 1761894627.8906488,
+      "size": 17833,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_4_notBAD_4t.csv",
+      "mtime": 1762698628.464866,
+      "size": 41708,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_4_notBAD_nolocalt.csv",
+      "mtime": 1762778280.7004821,
+      "size": 28205,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_4_notBADt.csv",
+      "mtime": 1762679463.8123207,
+      "size": 22958,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_4t.csv",
+      "mtime": 1762134194.524143,
+      "size": 19236,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_5_notBAD_5t.csv",
+      "mtime": 1762698629.1368465,
+      "size": 40036,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_5_notBAD_nolocalt.csv",
+      "mtime": 1762778100.6384804,
+      "size": 15242,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_5_notBADt.csv",
+      "mtime": 1762679468.6319597,
+      "size": 22758,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_5t.csv",
+      "mtime": 1761723603.8485265,
+      "size": 17165,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_6_notBAD_6t.csv",
+      "mtime": 1762698614.831984,
+      "size": 39158,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_6_notBAD_nolocalt.csv",
+      "mtime": 1762778100.636871,
+      "size": 13128,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_6_notBADt.csv",
+      "mtime": 1762679476.745093,
+      "size": 21402,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1_8_6t.csv",
+      "mtime": 1761900601.2965283,
+      "size": 22428,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test1t.csv",
+      "mtime": 1762511850.7790449,
+      "size": 479850,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test_notBAD_origt.csv",
+      "mtime": 1763107873.739234,
+      "size": 95518,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\IMOEX_test_notBADt.csv",
+      "mtime": 1762538464.091226,
+      "size": 735892,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\RM_tr_Workt.csv",
+      "mtime": 1760026053.3312466,
+      "size": 1807,
+      "ticker": "RM"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\RMU5_simple_trend_RWt.csv",
+      "mtime": 1759989700.944932,
+      "size": 366311,
+      "ticker": "RMU5"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\SiBDt.csv",
+      "mtime": 1760003764.4088352,
+      "size": 58805,
+      "ticker": "SIBDT"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_+localt.csv",
+      "mtime": 1762781652.2422867,
+      "size": 31704,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_11_11_tryt.csv",
+      "mtime": 1762867457.9763799,
+      "size": 2346,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_1t.csv",
+      "mtime": 1762841270.317324,
+      "size": 43215,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR4_zt.csv",
+      "mtime": 1763101833.6942468,
+      "size": 120069,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR5_zt.csv",
+      "mtime": 1763106547.6139295,
+      "size": 115639,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR6_zt.csv",
+      "mtime": 1763100904.1023989,
+      "size": 125061,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR7_zt.csv",
+      "mtime": 1763059431.6123376,
+      "size": 108225,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR8_zt.csv",
+      "mtime": 1763059437.97418,
+      "size": 116530,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR9_zt.csv",
+      "mtime": 1763190869.570861,
+      "size": 140856,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_10_600_2t.csv",
+      "mtime": 1763465731.3730712,
+      "size": 16084,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_11_200_15t.csv",
+      "mtime": 1763466995.3957193,
+      "size": 15111,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_5_10_9t.csv",
+      "mtime": 1763552102.2283978,
+      "size": 19976,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_5_2_4t.csv",
+      "mtime": 1763466818.688311,
+      "size": 16099,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_5_300_15t.csv",
+      "mtime": 1763554902.245314,
+      "size": 19347,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_5_40_25t.csv",
+      "mtime": 1763550601.5030167,
+      "size": 18014,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_5_5_30t.csv",
+      "mtime": 1764057210.5971873,
+      "size": 20226,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_KATR_8_40_5t.csv",
+      "mtime": 1763465743.3649018,
+      "size": 16310,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_1_1Lt.csv",
+      "mtime": 1762866976.8617506,
+      "size": 17626,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_1_1t.csv",
+      "mtime": 1762859708.9015334,
+      "size": 19772,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_1t.csv",
+      "mtime": 1762848810.6495128,
+      "size": 18847,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_2_1Lt.csv",
+      "mtime": 1762866981.4250207,
+      "size": 14756,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_2_1t.csv",
+      "mtime": 1762859704.1390488,
+      "size": 20569,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_2t.csv",
+      "mtime": 1762848808.8884182,
+      "size": 18847,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_3_1Lt.csv",
+      "mtime": 1762866970.9250472,
+      "size": 15847,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_3_1t.csv",
+      "mtime": 1762859716.432169,
+      "size": 19300,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_3t.csv",
+      "mtime": 1762848808.4231453,
+      "size": 21022,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_4_1Lt.csv",
+      "mtime": 1762866937.7127745,
+      "size": 15363,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_4_1t.csv",
+      "mtime": 1762859705.5015357,
+      "size": 24048,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_4t.csv",
+      "mtime": 1762848801.1153107,
+      "size": 18441,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_5_1Lt.csv",
+      "mtime": 1762866960.3473809,
+      "size": 14039,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_5_1t.csv",
+      "mtime": 1762859705.8283658,
+      "size": 17748,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_5t.csv",
+      "mtime": 1762848808.2989376,
+      "size": 17550,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_6_1Lt.csv",
+      "mtime": 1762866913.2731006,
+      "size": 12098,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_6_1t.csv",
+      "mtime": 1762859713.6942198,
+      "size": 18270,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_tr_6t.csv",
+      "mtime": 1762848792.768471,
+      "size": 14613,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_GLD_new_VOLPERC_1_2_140t.csv",
+      "mtime": 1764150585.0839932,
+      "size": 32886,
+      "ticker": "GLD"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_IMOEX_CL_2t.csv",
+      "mtime": 1763399556.7334292,
+      "size": 30145,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_IMOEX_CLt.csv",
+      "mtime": 1763386036.3160417,
+      "size": 51151,
+      "ticker": "IMOEX"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_Si_spread_FLt.csv",
+      "mtime": 1764063508.3106434,
+      "size": 197,
+      "ticker": "SI"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\T_si_spread_tryt.csv",
+      "mtime": 1764066210.9049566,
+      "size": 4830,
+      "ticker": "SI"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\TEST_CNYRUBF_first_look__3__20250918_203041t.csv",
+      "mtime": 1760103181.5307212,
+      "size": 836960,
+      "ticker": "TEST"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\TEST_CNYRUBF_first_look__3t.csv",
+      "mtime": 1758216604.5619102,
+      "size": 92585,
+      "ticker": "TEST"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\TEST_CNYRUBF_first_lookt.csv",
+      "mtime": 1757089783.0700867,
+      "size": 124798,
+      "ticker": "TEST"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\TEST_GLD_first_look_4173t.csv",
+      "mtime": 1755782558.1846075,
+      "size": 776,
+      "ticker": "TEST"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\TEST_GLD_first_look_5400_0t.csv",
+      "mtime": 1756316818.575127,
+      "size": 254808,
+      "ticker": "TEST"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\TEST_GLD_first_look_6900_15t.csv",
+      "mtime": 1757064067.4328032,
+      "size": 533238,
+      "ticker": "TEST"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\TEST_GLD_first_look_new — 690t.csv",
+      "mtime": 1756908685.1394715,
+      "size": 158449,
+      "ticker": "TEST"
+    },
+    {
+      "path": "C:\\Quik_Alor\\lua\\logs\\WORK_GLD_RW_trendt.csv",
+      "mtime": 1762533602.3736317,
+      "size": 109342,
+      "ticker": "WORK"
+    }
+  ]
+}

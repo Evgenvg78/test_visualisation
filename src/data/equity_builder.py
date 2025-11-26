@@ -1,13 +1,9 @@
-"""Сборка единой таблицы Equity из свечей и сделок.
+"""Unified equity builder for trade logs + OHLC candles.
 
-Функция build_equity читает CSV со свечами и CSV со сделками, приводит столбцы дат к единому
-формату, сопоставляет каждой строке лога последнюю доступную свечу (merge_asof) и рассчитывает колонки
-action_price, deal_price, current_pos, prev_position, prev_action_price, delta_price,
-Pnl и Equity согласно заданию.
-
-Пример использования:
-    from src.data.equity_builder import build_equity
-    df = build_equity(candles_csv='candles.csv', trades_csv='trades.csv')
+The function below normalizes candle/trade columns, builds a minute-level
+timeline around the trades, and emits a DataFrame with consistent fields:
+`action_price`, `deal_price`, `current_pos`, `prev_position`, `prev_action_price`,
+`delta_price`, `comis_count`, `Pnl`, `Equity`, `bot_equity`.
 """
 
 from __future__ import annotations
@@ -22,269 +18,137 @@ from .csv_transformer_profit import load_transform_csv
 __all__ = ["build_equity"]
 
 
-def _ensure_datetime(col: pd.Series) -> pd.Series:
-    """Привести серию к pd.Timestamp и округлить вниз до минуты."""
-    return pd.to_datetime(col, errors="coerce").dt.floor("min")
+def _ensure_datetime(series: pd.Series) -> pd.Series:
+    return pd.to_datetime(series, errors="coerce").dt.floor("min")
+
+
+def _find_datetime_column(df: pd.DataFrame) -> str:
+    for candidate in ("DATE_TIME", "date_time"):
+        if candidate in df.columns:
+            return candidate
+    options = [col for col in df.columns if "date" in col.lower()]
+    if not options:
+        raise KeyError("DataFrame must contain a datetime column (e.g. 'date_time').")
+    return options[0]
+
+
+def _load_candles(path: Union[str, Path], encoding: str) -> pd.DataFrame:
+    candles = pd.read_csv(Path(path), encoding=encoding)
+    dt_col = _find_datetime_column(candles)
+    candles = candles.copy()
+    candles["date_time"] = _ensure_datetime(candles[dt_col])
+    candles = candles.sort_values("date_time").reset_index(drop=True)
+    return candles
+
+
+def _prepare_trades(raw: pd.DataFrame) -> pd.DataFrame:
+    trades = raw.copy()
+    trades["_order"] = trades.index
+    dt_col = _find_datetime_column(trades)
+    trades["date_time"] = _ensure_datetime(trades[dt_col])
+    trades = trades.sort_values(["date_time", "_order"]).reset_index(drop=True)
+    trades["price"] = pd.to_numeric(trades.get("price"), errors="coerce").round(2)
+    trades["current_pos"] = (
+        pd.to_numeric(trades.get("current_pos"), errors="coerce").fillna(0).astype(int)
+    )
+    profit_source = trades["position_profit"] if "position_profit" in trades else 0.0
+    trades["position_profit"] = pd.to_numeric(profit_source, errors="coerce").fillna(0.0)
+    return trades
+
+
+def _build_timeline(trades: pd.DataFrame, time_margin: pd.Timedelta) -> pd.DataFrame:
+    valid_times = trades["date_time"].dropna()
+    if valid_times.empty:
+        return pd.DataFrame(columns=["date_time"])
+    start = valid_times.min() - time_margin
+    end = valid_times.max() + time_margin
+    timeline = pd.date_range(start, end, freq="1min")
+    return pd.DataFrame({"date_time": timeline})
 
 
 def build_equity(
     candles_csv: Union[str, Path],
     trades_csv: Union[str, Path],
+    *,
     candles_encoding: str = "utf-8",
-    trades_use_transformer: bool = True,
-    comis: float = 0.5,
+    time_margin: Union[str, pd.Timedelta] = "5min",
+    comis: float = 0.0,
 ) -> pd.DataFrame:
-    """Построить DataFrame с Equity по минутам.
+    """Build equity using unified logic (ex v1+v2).
 
     Args:
-        candles_csv: путь к CSV со свечами. Ожидается колонка DATE_TIME (или date_time)
-            и колонки OPEN,HIGH,LOW,CLOSE,VOL,1_step_price.
-        trades_csv: путь к CSV со сделками. Можно использовать модульный парсер
-            (csv_transformer_profit.load_transform_csv) — по умолчанию используется он.
-        candles_encoding: encoding при чтении файла со свечами.
-        trades_use_transformer: если True, используем load_transform_csv для чтения сделок
-            (корректно обработает cp1251/sep=';'). Если False, прочитаем через pandas
-            автоматически (может потребоваться корректировка разделителя/кодировки).
-        comis: комиссия в рублях за контракт на каждое действие (вход/выход).
-
-    Returns:
-        pd.DataFrame объединённый и дополненный колонками по заданию.
-        Новая колонка `comis_count` показывает комиссию за действие в рублях.
+        candles_csv: path to candles CSV.
+        trades_csv: path to trade log CSV.
+        candles_encoding: encoding used for candles file.
+        time_margin: margin added around the trades when building the minute timeline.
+        comis: commission per trade step.
     """
-    candles_path = Path(candles_csv)
-    if not candles_path.exists():
-        raise FileNotFoundError(f"Candles CSV not found: {candles_csv}")
 
-    # 1) Читать свечи
-    candles = pd.read_csv(candles_path, encoding=candles_encoding)
+    trades_raw = load_transform_csv(trades_csv)
+    if trades_raw.empty:
+        return pd.DataFrame()
+    trades = _prepare_trades(trades_raw)
 
-    # Поддержать возможно разные имена столбца даты
-    if "DATE_TIME" in candles.columns:
-        dt_col = "DATE_TIME"
-    elif "date_time" in candles.columns:
-        dt_col = "date_time"
-    else:
-        # Попробуем найти столбец похожий на дату
-        possible = [c for c in candles.columns if "date" in c.lower()]
-        if not possible:
-            raise KeyError(
-                "Не найден столбец даты в файле свечей (ожидалось 'DATE_TIME')"
-            )
-        dt_col = possible[0]
+    candles = _load_candles(candles_csv, candles_encoding)
+    if candles["date_time"].isna().all():
+        raise ValueError("Candles file does not contain valid timestamps.")
 
-    candles = candles.copy()
-    candles["date_time"] = _ensure_datetime(candles[dt_col])
-    candles = candles.sort_values("date_time").reset_index(drop=True)
+    margin = pd.Timedelta(time_margin)
+    timeline = _build_timeline(trades, margin)
+    if timeline.empty:
+        return pd.DataFrame()
 
-    # 2) Читать сделки
-    if trades_use_transformer:
-        # ����������� ������ ���������� ��������������� �������: date_time, price, current_pos
-        trades = load_transform_csv(trades_csv)
-        trades = trades.copy()
-        trades["_order"] = trades.index
-        # ����������� ���� � ������ �������
-        if "date_time" in trades.columns:
-            trades["date_time"] = _ensure_datetime(trades["date_time"])
-        if "position_profit" in trades.columns:
-            cleaned_profit = (
-                trades["position_profit"]
-                .astype(str)
-                .str.replace(r"\s+", "", regex=True)
-                .str.replace(",", ".")
-            )
-            trades["position_profit"] = pd.to_numeric(
-                cleaned_profit,
-                errors="coerce",
-            ).fillna(0.0)
-        else:
-            profit_candidates = [
-                c
-                for c in trades.columns
-                if "profit" in c.casefold() or "приб" in c.casefold()
-            ]
-            if profit_candidates:
-                cleaned_profit = (
-                    trades[profit_candidates[0]]
-                    .astype(str)
-                    .str.replace(r"\s+", "", regex=True)
-                    .str.replace(",", ".")
-                )
-                trades["position_profit"] = pd.to_numeric(
-                    cleaned_profit,
-                    errors="coerce",
-                ).fillna(0.0)
-        if "price" in trades.columns:
-            trades["price"] = pd.to_numeric(trades["price"], errors="coerce").round(2)
-        if "current_pos" in trades.columns:
-            trades["current_pos"] = (
-                pd.to_numeric(trades["current_pos"], errors="coerce")
-                .fillna(0)
-                .astype(int)
-            )
-        if "position_profit" in trades.columns:
-            trades["position_profit"] = (
-                pd.to_numeric(trades["position_profit"], errors="coerce")
-                .fillna(0.0)
-            )
-    else:
-        trades_path = Path(trades_csv)
-        if not trades_path.exists():
-            raise FileNotFoundError(f"Trades CSV not found: {trades_csv}")
-        # Попробуем прочитать с sep=';'
-        trades = pd.read_csv(trades_path, sep=";", encoding="cp1251")
-        trades["_order"] = trades.index
-        # Привести названия и типы к унифицированному виду (date_time, price, current_pos)
-        # Поддержим старые русские имена при чтении вручную
-        if "Дата и время" in trades.columns:
-            trades = trades.copy()
-            trades["date_time"] = _ensure_datetime(trades["Дата и время"])
-        if "Цена последней сделки" in trades.columns:
-            trades = trades.copy()
-            trades["price"] = pd.to_numeric(
-                trades["Цена последней сделки"]
-                .astype(str)
-                .str.replace(r"\s+", "", regex=True)
-                .str.replace(",", "."),
-                errors="coerce",
-            )
-        if "Текущее количество контрактов" in trades.columns:
-            trades = trades.copy()
-            cleaned_current_pos = (
-                trades["Текущее количество контрактов"]
-                .astype(str)
-                .str.replace(",", ".", regex=False)
-                .str.replace(r"[^\d\.\-]", "", regex=True)
-            )
-            trades["current_pos"] = (
-                pd.to_numeric(cleaned_current_pos, errors="coerce")
-                .fillna(0.0)
-                .round()
-                .astype(int)
-            )
-        if "date_time" in trades.columns:
-            trades["date_time"] = _ensure_datetime(trades["date_time"])
-
-    # Убедиться, что в trades есть колонка date_time
-    trades = trades.copy()
-    trades["_order"] = trades.index
-
-    if "date_time" in trades.columns:
-        trades["date_time"] = _ensure_datetime(trades["date_time"])
-
-    if "price" in trades.columns:
-        trades["price"] = pd.to_numeric(trades["price"], errors="coerce").round(2)
-
-    if "current_pos" in trades.columns:
-        trades["current_pos"] = (
-            pd.to_numeric(trades["current_pos"], errors="coerce")
-            .fillna(0)
-            .astype(int)
-        )
-
-    if "position_profit" not in trades.columns:
-        trades["position_profit"] = 0.0
-    else:
-        trades["position_profit"] = (
-            pd.to_numeric(trades["position_profit"], errors="coerce")
-            .fillna(0.0)
-        )
-
-    if "date_time" not in trades.columns:
-        # ������� ����� ������� � �����
-        poss = [c for c in trades.columns if "date" in c.lower()]
-        if poss:
-            trades["date_time"] = _ensure_datetime(trades[poss[0]])
-        else:
-            raise KeyError(
-                "�� ������ ������� ���� � ����� ������ (��������� 'date_time' ��� '���� � �����')"
-            )
-
-    trades = trades.sort_values(
-        ["date_time", "_order"], kind="mergesort"
-    ).reset_index(drop=True)
-
-    # Merge: trades — основной источник, свечи подмешиваем через merge_asof
-    merged = pd.merge_asof(
+    frame_with_candles = timeline.merge(candles, on="date_time", how="left")
+    merged = frame_with_candles.merge(
         trades,
-        candles,
         on="date_time",
-        direction="backward",
-        allow_exact_matches=True,
+        how="left",
+        suffixes=("", "_trade"),
     )
-    if "1_step_price" not in merged.columns:
-        raise KeyError(
-            "В файле свечей отсутствует колонка шага цены (ожидалось '1_step_price')"
-        )
-    if merged["1_step_price"].isna().any():
-        first_missing = merged.loc[merged["1_step_price"].isna(), "date_time"].iloc[0]
-        raise ValueError(
-            f"Не удалось сопоставить свечу для сделки с timestamp {first_missing}"
-        )
-    merged = merged.drop(columns="_order")
 
-    # Переименуем поля price -> action_price и оставим current_pos как есть
-    rename_map = {}
-    if "price" in merged.columns:
-        rename_map["price"] = "action_price"
-    if "current_pos" in merged.columns:
-        rename_map["current_pos"] = "current_pos"
-    merged = merged.rename(columns=rename_map)
+    price_exists = merged["price"].notna() if "price" in merged else pd.Series(False, index=merged.index)
+    pos_exists = merged["current_pos"].notna() if "current_pos" in merged else pd.Series(False, index=merged.index)
+    profit_exists = merged["position_profit"].notna() if "position_profit" in merged else pd.Series(False, index=merged.index)
+    candle_exists = merged["CLOSE"].notna() if "CLOSE" in merged else pd.Series(False, index=merged.index)
+    mask_empty = ~(price_exists | pos_exists | profit_exists | candle_exists)
+    merged = merged.loc[~mask_empty].reset_index(drop=True)
 
-    # Заполнить current_pos вниз (forward fill), начальное значение — 0
-    merged["current_pos"] = merged["current_pos"].ffill().fillna(0).astype(int)
+    merged = merged.sort_values(["date_time", "_order"], kind="mergesort", na_position="last").reset_index(
+        drop=True
+    )
 
-    # prev_position = current_pos.shift(1), top = 0
+    merged["price_from_log"] = pd.to_numeric(merged.get("price"), errors="coerce")
+    merged["current_pos"] = (
+        pd.to_numeric(merged.get("current_pos"), errors="coerce").ffill().fillna(0).astype(int)
+    )
+    merged["position_profit"] = pd.to_numeric(merged.get("position_profit"), errors="coerce").fillna(0.0)
     merged["prev_position"] = merged["current_pos"].shift(1).fillna(0).astype(int)
 
-    # В action_price пустые ячейки заполнить: если prev_position < 0 -> HIGH, иначе LOW
-    # Сначала убедимся, что колонок HIGH/LOW есть
-    if "HIGH" not in merged.columns or "LOW" not in merged.columns:
-        raise KeyError("В файле свечей должны быть колонки HIGH и LOW")
+    merged["action_price"] = merged["price_from_log"]
+    if "CLOSE" in merged:
+        merged["action_price"] = merged["action_price"].fillna(
+            pd.to_numeric(merged["CLOSE"], errors="coerce")
+        )
+    if "HIGH" in merged and "LOW" in merged:
+        mask_nan = merged["action_price"].isna()
+        merged.loc[mask_nan & (merged["prev_position"] < 0), "action_price"] = pd.to_numeric(
+            merged.loc[mask_nan, "HIGH"], errors="coerce"
+        )
+        merged.loc[mask_nan & (merged["prev_position"] >= 0), "action_price"] = pd.to_numeric(
+            merged.loc[mask_nan, "LOW"], errors="coerce"
+        )
+    merged["action_price"] = merged["action_price"].ffill()
 
-    mask_nan = merged["action_price"].isna()
-    mask_neg = mask_nan & (merged["prev_position"] < 0)
-    mask_nonneg = mask_nan & (merged["prev_position"] >= 0)
-    merged.loc[mask_neg, "action_price"] = merged.loc[mask_neg, "HIGH"]
-    merged.loc[mask_nonneg, "action_price"] = merged.loc[mask_nonneg, "LOW"]
-
-    # ������� �������� action_price -> deal_price ������ ��� �������� �������
-    position_changed = merged["current_pos"] != merged["prev_position"]
-    merged["deal_price"] = merged["action_price"].where(position_changed)
-
-    # prev_action_price = action_price.shift(1), top = current action_price (т.е. first value)
+    merged["deal_price"] = merged["action_price"].where(merged["current_pos"] != merged["prev_position"])
     merged["prev_action_price"] = merged["action_price"].shift(1)
     if not merged["action_price"].empty:
-        merged.iloc[0, merged.columns.get_loc("prev_action_price")] = merged.iloc[0][
-            "action_price"
-        ]
-
-    # delta_price = action_price - prev_action_price
+        merged.loc[0, "prev_action_price"] = merged.loc[0, "action_price"]
     merged["delta_price"] = merged["action_price"] - merged["prev_action_price"]
 
-    # comis_count = abs(trade_size) * comis
-    merged["comis_count"] = (
-        (merged["current_pos"] - merged["prev_position"]).abs() * comis
-    )
-
-    # Pnl = prev_position * delta_price * 1_step_price - commission
-    step_col = None
-    for candidate in ("1_step_price", "1_step_price ", "one_step_price"):
-        if candidate in merged.columns:
-            step_col = candidate
-            break
-    if step_col is None:
-        raise KeyError(
-            "В файле свечей не найдена колонка с ценой шага (ожидалось '1_step_price')"
-        )
-
-    merged["Pnl"] = (
-        merged["prev_position"] * merged["delta_price"] * merged[step_col]
-        - merged["comis_count"].fillna(0.0)
-    )
-
-    # Equity = Pnl.cumsum()
-    merged["Equity"] = merged["Pnl"].fillna(0).cumsum()
-    merged["position_profit"] = merged["position_profit"].fillna(0.0)
+    step = pd.to_numeric(merged.get("1_step_price"), errors="coerce").ffill().fillna(1.0)
+    merged["comis_count"] = (merged["current_pos"] - merged["prev_position"]).abs() * comis
+    merged["Pnl"] = merged["prev_position"] * merged["delta_price"] * step - merged["comis_count"]
+    merged["Equity"] = merged["Pnl"].fillna(0.0).cumsum()
     merged["bot_equity"] = merged["position_profit"].cumsum()
 
-    return merged
+    return merged.drop(columns="_order", errors="ignore")

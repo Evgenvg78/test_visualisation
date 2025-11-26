@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass
 from os import PathLike
 from pathlib import Path
-from typing import Any, Mapping, Optional, Sequence, Tuple
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 import pandas as pd
 
@@ -54,8 +54,76 @@ class CombinedEquityResult:
     figure: Optional[Any]
 
 
+def build_single_equity(
+    log_path: PathLike[str],
+    *,
+    comis: float = 0.0,
+    timezone: Optional[str] = None,
+    process_kwargs: Optional[Mapping[str, Any]] = None,
+) -> LogEquitySnapshot:
+    """Process a single log file into a snapshot with equity/report data."""
+
+    options: dict[str, Any] = {"comis": comis, "build_equity_report": True, "show_plot": False}
+    if process_kwargs:
+        options.update(process_kwargs)
+    options["build_equity_report"] = True
+    options["show_plot"] = False
+    result = process_log_v2(log_path, **options)
+    equity = _normalize_equity(result.equity, timezone=timezone)
+    if equity is None or equity.empty:
+        raise ValueError(f"Equity is empty for log {log_path}")
+
+    path_obj = Path(log_path)
+    ticker = _resolve_ticker(equity, path_obj)
+    series = _series_from_equity(equity, ticker)
+    return LogEquitySnapshot(
+        log_path=path_obj,
+        ticker=ticker,
+        equity=equity,
+        series=series,
+        report=result.report,
+    )
+
+
+def _snapshot_from_dataframe(
+    df: pd.DataFrame,
+    *,
+    name: str,
+    timezone: Optional[str],
+) -> Optional[LogEquitySnapshot]:
+    equity = _normalize_equity(df, timezone=timezone)
+    if equity is None or equity.empty:
+        return None
+    series = _series_from_equity(equity, name)
+    return LogEquitySnapshot(
+        log_path=Path(name),
+        ticker=name,
+        equity=equity,
+        series=series,
+        report=None,
+    )
+
+
+def _normalize_snapshot(
+    snapshot: LogEquitySnapshot,
+    *,
+    timezone: Optional[str],
+) -> Optional[LogEquitySnapshot]:
+    equity = _normalize_equity(snapshot.equity, timezone=timezone)
+    if equity is None or equity.empty:
+        return None
+    series = _series_from_equity(equity, snapshot.ticker)
+    return LogEquitySnapshot(
+        log_path=snapshot.log_path,
+        ticker=snapshot.ticker,
+        equity=equity,
+        series=series,
+        report=snapshot.report,
+    )
+
+
 def combine_equity_logs(
-    log_paths: Sequence[PathLike[str]],
+    equities: Sequence[Union[PathLike[str], LogEquitySnapshot, pd.DataFrame, tuple[str, pd.DataFrame]]],
     *,
     process_kwargs: Optional[Mapping[str, Any]] = None,
     timezone: Optional[str] = None,
@@ -63,10 +131,10 @@ def combine_equity_logs(
     plot_title: str = "Total Equity",
 ) -> CombinedEquityResult:
     """
-    Combine equity curves from multiple logs and return a consolidated result.
+    Combine equity curves from multiple inputs (paths, snapshots, or DataFrames).
 
     Args:
-        log_paths: paths to trade log CSVs.
+        equities: paths to logs, ready-made snapshots, or (name, DataFrame) tuples.
         process_kwargs: extra arguments forwarded to process_log_v2.
         timezone: target timezone for timestamps (if not None).
         build_plot: build a Plotly figure that overlays all series plus the total.
@@ -76,33 +144,39 @@ def combine_equity_logs(
         ValueError: if no equity data is available after processing the logs.
     """
 
-    process_options: dict[str, Any] = {"build_equity_report": True, "show_plot": False}
-    if process_kwargs:
-        process_options.update(process_kwargs)
-    process_options["build_equity_report"] = True
-
     snapshots: list[LogEquitySnapshot] = []
-    for path in log_paths:
-        log_path = Path(path)
-        result = process_log_v2(log_path, **process_options)
-        equity = _normalize_equity(result.equity, timezone=timezone)
-        if equity is None or equity.empty:
-            logger.warning("Skipping %s because equity is empty", log_path)
+    default_comis = float(process_kwargs.get("comis", 0.0)) if process_kwargs else 0.0
+
+    for idx, source in enumerate(equities):
+        snapshot: Optional[LogEquitySnapshot] = None
+        try:
+            if isinstance(source, LogEquitySnapshot):
+                snapshot = _normalize_snapshot(source, timezone=timezone)
+            elif isinstance(source, pd.DataFrame):
+                snapshot = _snapshot_from_dataframe(
+                    source, name=f"equity_{idx+1}", timezone=timezone
+                )
+            elif isinstance(source, tuple) and len(source) == 2 and isinstance(source[1], pd.DataFrame):
+                name = str(source[0])
+                snapshot = _snapshot_from_dataframe(source[1], name=name, timezone=timezone)
+            else:
+                snapshot = build_single_equity(
+                    Path(source),
+                    comis=default_comis,
+                    timezone=timezone,
+                    process_kwargs=process_kwargs,
+                )
+        except Exception as exc:
+            logger.warning("Skipping %s because processing failed: %s", source, exc)
+            snapshot = None
+
+        if snapshot is None:
+            logger.warning("Skipping %s because equity is empty", source)
             continue
-        ticker = _resolve_ticker(equity, log_path)
-        series = _series_from_equity(equity, ticker)
-        snapshots.append(
-            LogEquitySnapshot(
-                log_path=log_path,
-                ticker=ticker,
-                equity=equity,
-                series=series,
-                report=result.report,
-            )
-        )
+        snapshots.append(snapshot)
 
     if not snapshots:
-        raise ValueError("No equity data was produced by any of the logs")
+        raise ValueError("No equity data was produced by any of the inputs")
 
     combined_df = _build_combined_dataframe(snapshots)
     go_requirement = _total_go(snapshots)
@@ -206,7 +280,7 @@ def _build_combined_dataframe(
     for snap in snapshots:
         column = _unique_column_name(snap.ticker, seen)
         values = snap.series.reindex(idx)
-        values = values.ffill().fillna(method="bfill")
+        values = values.ffill().bfill()
         if values.isna().all():
             continue
         builder[column] = values
@@ -351,5 +425,6 @@ __all__ = [
     "CombinedEquityResult",
     "CombinedEquityMetrics",
     "LogEquitySnapshot",
+    "build_single_equity",
     "combine_equity_logs",
 ]
